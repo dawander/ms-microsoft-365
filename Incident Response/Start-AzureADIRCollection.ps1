@@ -23,18 +23,11 @@ Import-Module AzureAD
 Import-Module AzureADIncidentResponse
 
 #############################################################
-## Gather the parameters and set the working directory
+## Gather the parameters 
 ## You may set the parameters in the script or enter by prompt
 
 $DomainName = ""
 $OutputPath = ""
-
-
-## If the DomainName variable is undefined, prompt for input
-if ($DomainName -eq "") {
-Write-Host
-$DomainName = Read-Host 'Enter the primary domain name associated with the tenant'
-}
 
 
 ## If the OutputPath variable is undefined, prompt for input
@@ -44,23 +37,37 @@ $OutputPath = Read-Host 'Enter the output path, e.g. C:\IROutput'
 }
 
 ## If the output path does not exist, then create it
-$CheckOutputPath = Get-Item $OutputPath
+$CheckOutputPath = Get-Item $OutputPath -ErrorAction SilentlyContinue
 if (!$CheckOutputPath) {
+Write-Host
+Write-Host "Output path does not exist, so the directory will be created." -ForegroundColor Yellow
 mkdir $OutputPath
 }
 
+## If the DomainName variable is undefined, prompt for input
+if ($DomainName -eq "") {
+Write-Host
+$DomainName = Read-Host 'Enter the primary domain name associated with the tenant'
+}
+
+$CheckSubDir = Get-Item $OutputPath\$DomainName -ErrorAction SilentlyContinue
+if (!$CheckSubDir) {
+Write-Host
+Write-Host "Domain sub-directory does not exist, so the sub-directory will be created." -ForegroundColor Yellow
+mkdir $OutputPath\$DomainName
+}
+
 ## Change directory to the OutputPath 
-cd $OutputPath
+cd $OutputPath\$DomainName
 
 #############################################################
-## Connect to Azure AD
+## Get the tenant ID and connect to Azure AD
 $TenantID = Get-AzureADIRTenantId -DomainName $DomainName
 Connect-AzureADIR -TenantId $TenantID 
-
 #############################################################
 
 ## Get a current list of Azure AD Privileged role assignments 
-Get-AzureADIRPrivilegedRoleAssignment -TenantId $TenantID -CsVOutput
+Get-AzureADIRPrivilegedRoleAssignment -TenantId $TenantID -CsvOutput
 
 ## Gets two lists of applications with assigned permissions: delegated (user) permissions and application permissions
 Get-AzureADIRPermission -TenantId $TenantID -CsvOutput
@@ -96,11 +103,19 @@ Write-Host "There is no data returned for the function Get-AzureADIRSsprUsageHis
 Get-AzureADIRSsprUsageHistory -TenantId $TenantID -CsvOutput
 }
 
-
+## Get Azure AD Conditional Access policies 
+$CAPolicy = Get-AzureADIRConditionalAccessPolicy -TenantId $TenantID
+if (!$CAPolicy) {
+Write-Host "There is no data returned for the function Get-AzureADIRConditionalAccessPolicy" -ForegroundColor Cyan
+} else {
+Get-AzureADIRConditionalAccessPolicy -TenantId $TenantID -All -XmlOutput
+}
 
 ######################################################################
 Write-Host "Please review the files in your output directory" -ForegroundColor Cyan
-
+Write-Host 
+Write-Host "Script completed." -ForegroundColor Cyan
+Write-Host 
 
 <#
 #############################################################
@@ -121,8 +136,11 @@ Get-AzureADIRAuditActivity -TenantId $TenantID -Category "ApplicationManagement"
 #############################################################
 ## Collect Azure AD Audit logs for specific activities
 
-## Gets a list of new apps 
-Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Add application") -Out | Out-GridView
+## Gets new MFA method registrations
+Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName "User registered security info" | Out-GridView
+
+## Gets newly added applications
+Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Add application") | Out-GridView
 
 ## Gets a list of newly added application permissions
 Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Add app role assignment to service principal") | Out-GridView
@@ -130,17 +148,15 @@ Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Add app ro
 ## Gets a list of newly added delegated user permissions
 Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Add delegated permission grant") | Out-GridView
 
-## Gets a list of application consents
+## Gets a list of newly consented application permissions
 Get-AzureADIRAuditActivity -TenantId $TenantID -ActivityDisplayName ("Consent to application") | Out-GridView
-
 
 #############################################################
 ## Gets stale user accounts not signed in within last 30 days (including guests)
-Get-AzureADIRUserLastSignInActivity -TenantId $TenantID -StaleThreshold 30 -GuestInfo | Export-Csv -Path $OutputPath\SignInLog_StaleAccountsLastSignIn.csv
+Get-AzureADIRUserLastSignInActivity -TenantId $TenantID -StaleThreshold 30 -GuestInfo | Export-Csv -Path $OutputPath\$DomainName\AADLog_StaleAccountsLastSignIn.csv
 
 #############################################################
-## Get Azure AD CA policies and output to XML file
-Get-AzureADIRConditionalAccessPolicy -TenantId $TenantID -All -XmlOutput
+
 
 
 #>
