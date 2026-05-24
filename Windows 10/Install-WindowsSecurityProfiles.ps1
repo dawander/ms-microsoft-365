@@ -1,11 +1,14 @@
 ﻿<##################################################################################################
 #
 .SYNOPSIS
-This script imports recommended Endpoint Security policies for Windows 10.
+This script imports recommended Windows 10 Security Profiles described in this resource: 
 
-Please read about and test the impacts of each policy before assigning to users/devices: 
+https://gum.co/FvuOd.
 
-https://gum.co/FvuOd
+Please read about and test the impacts of each policy before assigning to users/devices.
+
+.SOURCE
+https://github.com/vanvfields/Microsoft-365/
 
 All scripts offered without warranty of any kind.
 
@@ -13,10 +16,10 @@ The functions contained in this script are from the Graph samples published by M
 https://github.com/microsoftgraph/powershell-intune-samples
 
 .NOTES
-    FileName:    Install-EndpointSecurity.ps1
+    FileName:    Install-WindowsSecurityProfiles.ps1
     Author:      Alex Fields (ITProMentor.com)
-    Created:     March 2021
-	Revised:     March 2021
+    Created:     October 2019
+	Revised:     January 2022
     
 #>
 ###################################################################################################
@@ -210,6 +213,775 @@ $JSON
 
 ####################################################
 
+Function Add-DeviceCompliancePolicybaseline(){
+
+    <#
+    .SYNOPSIS
+    This function is used to add a device compliance policy using the Graph API REST interface
+    .DESCRIPTION
+    The function connects to the Graph API Interface and adds a device compliance policy
+    .EXAMPLE
+    Add-DeviceCompliancePolicy -JSON $JSON
+    Adds an iOS device compliance policy in Intune
+    .NOTES
+    NAME: Add-DeviceCompliancePolicy
+    #>
+    
+    [cmdletbinding()]
+    
+    param
+    (
+        $JSON
+    )
+    
+    $graphApiVersion = "Beta"
+    $Resource = "deviceManagement/deviceCompliancePolicies"
+        
+        try {
+    
+            if($JSON -eq "" -or $JSON -eq $null){
+    
+            write-host "No JSON specified, please specify valid JSON for the iOS Policy..." -f Red
+    
+            }
+    
+            else {
+    
+            Test-JSON -JSON $JSON
+    
+            $uri = "https://graph.microsoft.com/$graphApiVersion/$($Resource)"
+            Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $JSON -ContentType "application/json"
+    
+            }
+    
+        }
+        
+        catch {
+    
+        $ex = $_.Exception
+        $errorResponse = $ex.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($errorResponse)
+        $reader.BaseStream.Position = 0
+        $reader.DiscardBufferedData()
+        $responseBody = $reader.ReadToEnd();
+        Write-Host "Response content:`n$responseBody" -f Red
+        Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+        write-host
+        break
+    
+        }
+    
+    }
+
+####################################################
+
+Function Add-DeviceConfigurationPolicy(){
+
+<#
+.SYNOPSIS
+This function is used to add an device configuration policy using the Graph API REST interface
+.DESCRIPTION
+The function connects to the Graph API Interface and adds a device configuration policy
+.EXAMPLE
+Add-DeviceConfigurationPolicy -JSON $JSON
+Adds a device configuration policy in Intune
+.NOTES
+NAME: Add-DeviceConfigurationPolicy
+#>
+
+[cmdletbinding()]
+
+param
+(
+    $JSON
+)
+
+$graphApiVersion = "Beta"
+$DCP_resource = "deviceManagement/deviceConfigurations"
+Write-Verbose "Resource: $DCP_resource"
+
+    try {
+
+        if($JSON -eq "" -or $JSON -eq $null){
+
+        write-host "No JSON specified, please specify valid JSON for the Android Policy..." -f Red
+
+        }
+
+        else {
+
+        Test-JSON -JSON $JSON
+
+        $uri = "https://graph.microsoft.com/$graphApiVersion/$($DCP_resource)"
+        Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $JSON -ContentType "application/json"
+
+        }
+
+    }
+
+    catch {
+
+    $ex = $_.Exception
+    $errorResponse = $ex.Response.GetResponseStream()
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+    $reader.BaseStream.Position = 0
+    $reader.DiscardBufferedData()
+    $responseBody = $reader.ReadToEnd();
+    Write-Host "Response content:`n$responseBody" -f Red
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+    write-host
+    break
+
+    }
+
+}
+
+####################################################
+
+Function Create-GroupPolicyConfigurations(){
+		
+<#
+.SYNOPSIS
+This function is used to add an device configuration policy using the Graph API REST interface
+.DESCRIPTION
+The function connects to the Graph API Interface and adds a device configuration policy
+.EXAMPLE
+Add-DeviceConfigurationPolicy -JSON $JSON
+Adds a device configuration policy in Intune
+.NOTES
+NAME: Add-DeviceConfigurationPolicy
+#>
+		
+		[cmdletbinding()]
+		param
+		(
+			$DisplayName,
+            $PolicyDescription
+		)
+		
+		$jsonCode = @"
+{
+    "description":"$($PolicyDescription)",
+    "displayName":"$($DisplayName)"
+}
+"@
+		
+		$graphApiVersion = "Beta"
+		$DCP_resource = "deviceManagement/groupPolicyConfigurations"
+		Write-Verbose "Resource: $DCP_resource"
+		
+		try
+		{
+			
+			$uri = "https://graph.microsoft.com/$graphApiVersion/$($DCP_resource)"
+			$responseBody = Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $jsonCode -ContentType "application/json"
+			
+			
+		}
+		
+		catch
+		{
+			
+			$ex = $_.Exception
+			$errorResponse = $ex.Response.GetResponseStream()
+			$reader = New-Object System.IO.StreamReader($errorResponse)
+			$reader.BaseStream.Position = 0
+			$reader.DiscardBufferedData()
+			$responseBody = $reader.ReadToEnd();
+			Write-Host "Response content:`n$responseBody" -f Red
+			Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+			write-host
+			break
+			
+		}
+		$responseBody.id
+}
+	
+####################################################
+	
+Function Create-GroupPolicyConfigurationsDefinitionValues(){
+		
+    <#
+    .SYNOPSIS
+    This function is used to get device configuration policies from the Graph API REST interface
+    .DESCRIPTION
+    The function connects to the Graph API Interface and gets any device configuration policies
+    .EXAMPLE
+    Get-DeviceConfigurationPolicy
+    Returns any device configuration policies configured in Intune
+    .NOTES
+    NAME: Get-GroupPolicyConfigurations
+    #>
+		
+		[cmdletbinding()]
+		Param (
+			
+			[string]$GroupPolicyConfigurationID,
+			$JSON
+			
+		)
+		
+		$graphApiVersion = "Beta"
+		
+		$DCP_resource = "deviceManagement/groupPolicyConfigurations/$($GroupPolicyConfigurationID)/definitionValues"
+		write-host $DCP_resource
+		try
+		{
+			if ($JSON -eq "" -or $JSON -eq $null)
+			{
+				
+				write-host "No JSON specified, please specify valid JSON for the Device Configuration Policy..." -f Red
+				
+			}
+			
+			else
+			{
+				
+				Test-JSON -JSON $JSON
+				
+				$uri = "https://graph.microsoft.com/$graphApiVersion/$($DCP_resource)"
+				Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $JSON -ContentType "application/json"
+			}
+			
+		}
+		
+		catch
+		{
+			
+			$ex = $_.Exception
+			$errorResponse = $ex.Response.GetResponseStream()
+			$reader = New-Object System.IO.StreamReader($errorResponse)
+			$reader.BaseStream.Position = 0
+			$reader.DiscardBufferedData()
+			$responseBody = $reader.ReadToEnd();
+			Write-Host "Response content:`n$responseBody" -f Red
+			Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+			write-host
+			break
+			
+		}
+		
+}
+	
+####################################################
+
+Function Add-MDMApplication(){
+
+
+
+<#
+
+.SYNOPSIS
+
+This function is used to add an MDM application using the Graph API REST interface
+
+.DESCRIPTION
+
+The function connects to the Graph API Interface and adds an MDM application from the itunes store
+
+.EXAMPLE
+
+Add-MDMApplication -JSON $JSON
+
+Adds an application into Intune
+
+.NOTES
+
+NAME: Add-MDMApplication
+
+#>
+
+
+
+[cmdletbinding()]
+
+
+
+param
+
+(
+
+    $JSON
+
+)
+
+
+
+$graphApiVersion = "Beta"
+
+$App_resource = "deviceAppManagement/mobileApps"
+
+
+
+    try {
+
+
+
+        if(!$JSON){
+
+
+
+        write-host "No JSON was passed to the function, provide a JSON variable" -f Red
+
+        break
+
+
+
+        }
+
+
+
+        Test-JSON -JSON $JSON
+
+
+
+        $uri = "https://graph.microsoft.com/$graphApiVersion/$($App_resource)"
+
+        Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Body $JSON -Headers $authToken
+
+
+
+    }
+
+
+
+    catch {
+
+
+
+    $ex = $_.Exception
+
+    $errorResponse = $ex.Response.GetResponseStream()
+
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+
+    $reader.BaseStream.Position = 0
+
+    $reader.DiscardBufferedData()
+
+    $responseBody = $reader.ReadToEnd();
+
+    Write-Host "Response content:`n$responseBody" -f Red
+
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+
+    write-host
+
+    break
+
+
+
+    }
+
+
+
+}
+
+####################################################
+
+Function Add-WindowsInformationProtectionPolicy(){
+
+
+
+<#
+
+.SYNOPSIS
+
+This function is used to add a Windows Information Protection policy using the Graph API REST interface
+
+.DESCRIPTION
+
+The function connects to the Graph API Interface and adds a Windows Information Protection policy
+
+.EXAMPLE
+
+Add-WindowsInformationProtectionPolicy -JSON $JSON
+
+Adds a Windows Information Protection policy in Intune
+
+.NOTES
+
+NAME: Add-WindowsInformationProtectionPolicy
+
+#>
+
+
+
+[cmdletbinding()]
+
+
+
+param
+
+(
+
+    $JSON
+
+)
+
+
+
+$graphApiVersion = "Beta"
+
+$Resource = "deviceAppManagement/windowsInformationProtectionPolicies"
+
+    
+
+    try {
+
+        
+
+        if($JSON -eq "" -or $JSON -eq $null){
+
+
+
+        write-host "No JSON specified, please specify valid JSON for the iOS Policy..." -f Red
+
+
+
+        }
+
+
+
+        else {
+
+
+
+        Test-JSON -JSON $JSON
+
+
+
+        $uri = "https://graph.microsoft.com/$graphApiVersion/$($Resource)"
+
+        Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $JSON -ContentType "application/json"
+
+
+
+        }
+
+
+
+    }
+
+    
+
+    catch {
+
+
+
+    $ex = $_.Exception
+
+    $errorResponse = $ex.Response.GetResponseStream()
+
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+
+    $reader.BaseStream.Position = 0
+
+    $reader.DiscardBufferedData()
+
+    $responseBody = $reader.ReadToEnd();
+
+    Write-Host "Response content:`n$responseBody" -f Red
+
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+
+    write-host
+
+    break
+
+
+
+    }
+
+
+
+}
+
+####################################################
+
+Function Add-MDMWindowsInformationProtectionPolicy(){
+
+
+
+<#
+
+.SYNOPSIS
+
+This function is used to add a Windows Information Protection policy using the Graph API REST interface
+
+.DESCRIPTION
+
+The function connects to the Graph API Interface and adds a Windows Information Protection policy
+
+.EXAMPLE
+
+Add-MDMWindowsInformationProtectionPolicy -JSON $JSON
+
+Adds a Windows Information Protection policy in Intune
+
+.NOTES
+
+NAME: Add-MDMWindowsInformationProtectionPolicy
+
+#>
+
+
+
+[cmdletbinding()]
+
+
+
+param
+
+(
+
+    $JSON
+
+)
+
+
+
+$graphApiVersion = "Beta"
+
+$Resource = "deviceAppManagement/mdmWindowsInformationProtectionPolicies"
+
+    
+
+    try {
+
+        
+
+        if($JSON -eq "" -or $JSON -eq $null){
+
+
+
+        write-host "No JSON specified, please specify valid JSON for the iOS Policy..." -f Red
+
+
+
+        }
+
+
+
+        else {
+
+
+
+        Test-JSON -JSON $JSON
+
+
+
+        $uri = "https://graph.microsoft.com/$graphApiVersion/$($Resource)"
+
+        Invoke-RestMethod -Uri $uri -Headers $authToken -Method Post -Body $JSON -ContentType "application/json"
+
+
+
+        }
+
+
+
+    }
+
+    
+
+    catch {
+
+
+
+    $ex = $_.Exception
+
+    $errorResponse = $ex.Response.GetResponseStream()
+
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+
+    $reader.BaseStream.Position = 0
+
+    $reader.DiscardBufferedData()
+
+    $responseBody = $reader.ReadToEnd();
+
+    Write-Host "Response content:`n$responseBody" -f Red
+
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+
+    write-host
+
+    break
+
+
+
+    }
+
+
+
+}
+
+####################################################
+
+Function Get-EnterpriseDomain(){
+
+
+
+<#
+
+.SYNOPSIS
+
+This function is used to get the initial domain created using the Graph API REST interface
+
+.DESCRIPTION
+
+The function connects to the Graph API Interface and gets the initial domain created
+
+.EXAMPLE
+
+Get-EnterpriseDomain
+
+Gets the initial domain created in Azure - Format domain.onmicrosoft.com
+
+.NOTES
+
+NAME: Get-EnterpriseDomain
+
+#>
+
+
+
+    try {
+
+
+
+    $uri = "https://graph.microsoft.com/v1.0/domains"
+
+
+
+    $domains = (Invoke-RestMethod -Uri $uri -Headers $authToken -Method Get).Value
+
+
+
+    $EnterpriseDomain = ($domains | ? { $_.isInitial -eq $true } | select id).id
+
+
+
+    return $EnterpriseDomain
+
+
+
+    }
+
+
+
+    catch {
+
+
+
+    $ex = $_.Exception
+
+    $errorResponse = $ex.Response.GetResponseStream()
+
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+
+    $reader.BaseStream.Position = 0
+
+    $reader.DiscardBufferedData()
+
+    $responseBody = $reader.ReadToEnd();
+
+    Write-Host "Response content:`n$responseBody" -f Red
+
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+
+    write-host
+
+    break
+
+
+
+
+
+    }
+
+
+
+}
+
+####################################################
+
+Function Get-TenantID(){
+
+
+
+<#
+
+.SYNOPSIS
+
+This function is used to get the tenant ID using the Graph API REST interface
+
+.DESCRIPTION
+
+The function connects to the Graph API Interface and gets the tenant ID
+
+.EXAMPLE
+
+Get-TenantID
+
+Gets the unique ID of this tenant in Azure - Format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+.NOTES
+
+NAME: Get-TenantID
+
+#>
+
+
+
+    try {
+
+
+
+    $uri = "https://graph.microsoft.com/v1.0/organization"
+    
+    $organziation = (Invoke-RestMethod -Uri $uri -Headers $authToken -Method Get).Value
+    
+    $TenantID = ($organziation | select id).id
+    
+    return $TenantID
+    
+    }
+
+
+
+    catch {
+    
+    $ex = $_.Exception
+
+    $errorResponse = $ex.Response.GetResponseStream()
+
+    $reader = New-Object System.IO.StreamReader($errorResponse)
+
+    $reader.BaseStream.Position = 0
+
+    $reader.DiscardBufferedData()
+
+    $responseBody = $reader.ReadToEnd();
+
+    Write-Host "Response content:`n$responseBody" -f Red
+
+    Write-Error "Request to $Uri failed with HTTP Status $($ex.Response.StatusCode) $($ex.Response.StatusDescription)"
+
+    write-host
+
+    break
+    
+
+    }
+
+
+
+}
+
+####################################################
+
 Function Add-EndpointSecurityPolicy(){
 
 <#
@@ -318,6 +1090,11 @@ $ESP_resource = "deviceManagement/templates?`$filter=(isof(%27microsoft.graph.se
 
 ####################################################
 
+
+###################################################################################################
+## Get your authentication token
+###################################################################################################
+
 #region Authentication
 
 write-host
@@ -371,35 +1148,1113 @@ $global:authToken = Get-AuthToken -User $User
 ####################################################
 
 
+###################################################################################################
+## Get Tenant ID and Enterprise Domain for use in certain policies
+###################################################################################################
+$TenantID = Get-TenantID
+$EnterpriseDomain = Get-EnterpriseDomain
+$Sharepoint = $EnterpriseDomain.Split(".")[0]
+
 
 ###################################################################################################
-## Store Current Template IDs as variables
+## Get Current Template IDs for use with the Endpoint Security Profiles
 ###################################################################################################
+$Templates = Get-EndpointSecurityTemplate ## Gets the most current templates
 
-## $Templates = Get-EndpointSecurityTemplate ## Gets all the current templates
+#$IDAV = "ccef13ea-d0a2-49b5-9a8a-5e397faeb9e4"
+$TempAV = $Templates |Where-Object displayName -eq "Microsoft Defender Antivirus"
+$IDAV = $TempAV.id
 
-$Template_WinBase = "c04a010a-e7c5-44b1-a814-88df6f053f16"
-$Template_EdgeBase = "a8d6fa0e-1e66-455b-bb51-8ce0dde1559e"
-#$Template_Antivirus = "b595dad1-920f-440e-ba12-22da622d5d92"
-$Template_Antivirus = "559a267f-e084-426d-b739-ade77ea07471"
-$Template_SecurityCenter = "da332b88-bd29-4def-a442-e0993ed08e24"
-$Template_BitLocker = "2b595bcc-ef65-42ce-a0e3-67389ae50b8e"
-$Template_Firewall = "c53e5a9f-2eec-4175-98a1-2b3d38084b91"
-$Template_ASR = "0e237410-1367-4844-bd7f-15fb0f08943b"
-$Template_DeviceControl = "4648b50e-d3ef-4ba0-848e-b0ef561b3aa5"
-$Template_AccountProtection = "0f2b5d70-d4e9-4156-8c16-1397eb6c54a5"
+#$IDWinExp = "8227e75a-da4d-4f8f-8566-9a080cb43961"
+$TempWinExp = $Templates |Where-Object displayName -eq "Windows Security experience"
+$IDWinExp = $TempWinExp.id
+
+#$IDBL = "d1174162-1dd2-4976-affc-6667049ab0ae"
+$TempBL = $Templates |Where-Object displayName -eq "BitLocker"
+$IDBL = $TempBL.id
+
+#$IDFW = "c53e5a9f-2eec-4175-98a1-2b3d38084b91"
+$TempFW = $Templates |Where-Object displayName -eq "Microsoft Defender Firewall"
+$IDFW = $TempFW.id
+
+#$IDASR = "0e237410-1367-4844-bd7f-15fb0f08943b"
+$TempASR = $Templates |Where-Object displayName -eq "Attack surface reduction rules"
+$IDASR = $TempASR.id
+
+#$IDDC = "4648b50e-d3ef-4ba0-848e-b0ef561b3aa5"
+$TempDC = $Templates |Where-Object displayName -eq "Device control"
+$IDDC = $TempDC.id
+
+#$IDAC = "0f2b5d70-d4e9-4156-8c16-1397eb6c54a5"
+$TempAC = $Templates |Where-Object displayName -eq "Account protection (Preview)"
+$IDAC = $TempAC.id
 
 
+#$IDWin = "c04a010a-e7c5-44b1-a814-88df6f053f16"
+$TempWin = $Templates |Where-Object displayName -eq "MDM Security Baseline for Windows 10 and later for Decemeber 2020"
+$IDWin = $TempWin.id
+
+#$IDEdge = "a8d6fa0e-1e66-455b-bb51-8ce0dde1559e"
+$TempEdge = $Templates |Where-Object displayName -eq "Microsoft Edge baseline"
+$IDEdge = $TempEdge.id
 
 ###################################################################################################
 ## JSON describing the policies to be imported
 ###################################################################################################
 
+$Comp_WinImmediate = @"
+
+{
+    "@odata.type":  "#microsoft.graph.windows10CompliancePolicy",
+    "description":  "Assign this policy to all users, including BYOD users. Windows compliance settings to apply immediately. \n",
+    "displayName":  "[ITPM Baseline] Windows: Immediate",
+    "passwordRequired":  false,
+    "passwordBlockSimple":  false,
+    "passwordRequiredToUnlockFromIdle":  false,
+    "passwordMinutesOfInactivityBeforeLock":  null,
+    "passwordExpirationDays":  null,
+    "passwordMinimumLength":  null,
+    "passwordMinimumCharacterSetCount":  null,
+    "passwordRequiredType":  "deviceDefault",
+    "passwordPreviousPasswordBlockCount":  null,
+    "requireHealthyDeviceReport":  false,
+    "osMinimumVersion":  "10.0.18363",
+    "osMaximumVersion":  null,
+    "mobileOsMinimumVersion":  null,
+    "mobileOsMaximumVersion":  null,
+    "earlyLaunchAntiMalwareDriverEnabled":  false,
+    "bitLockerEnabled":  false,
+    "secureBootEnabled":  false,
+    "codeIntegrityEnabled":  false,
+    "storageRequireEncryption":  false,
+    "activeFirewallRequired":  false,
+    "defenderEnabled":  true,
+    "defenderVersion":  null,
+    "signatureOutOfDate":  false,
+    "rtpEnabled":  true,
+    "antivirusRequired":  true,
+    "antiSpywareRequired":  false,
+    "deviceThreatProtectionEnabled":  false,
+    "deviceThreatProtectionRequiredSecurityLevel":  "unavailable",
+    "configurationManagerComplianceRequired":  false,
+    "tpmRequired":  false,
+    "deviceCompliancePolicyScript":  null,
+    "validOperatingSystemBuildRanges":  [
+
+                                        ],
+	"scheduledActionsForRule":[{"ruleName":"PasswordRequired","scheduledActionConfigurations":[{"actionType":"block","gracePeriodHours":0,"notificationTemplateId":"","notificationMessageCCList":[]}]}]
+}
+
+
+
+"@
+
+####################################################
+
+$Comp_WinDelayed = @"
+{
+    "@odata.type":  "#microsoft.graph.windows10CompliancePolicy",
+    "description":  "Assign this policy to all users including BYOD users. Windows compliance settings to apply with 24 hour grace period.",
+    "displayName":  "[ITPM Baseline] Windows: Delayed",
+    "passwordRequired":  false,
+    "passwordBlockSimple":  false,
+    "passwordRequiredToUnlockFromIdle":  false,
+    "passwordMinutesOfInactivityBeforeLock":  null,
+    "passwordExpirationDays":  null,
+    "passwordMinimumLength":  null,
+    "passwordMinimumCharacterSetCount":  null,
+    "passwordRequiredType":  "deviceDefault",
+    "passwordPreviousPasswordBlockCount":  null,
+    "requireHealthyDeviceReport":  false,
+    "osMinimumVersion":  "10.0.18363.476",
+    "osMaximumVersion":  null,
+    "mobileOsMinimumVersion":  null,
+    "mobileOsMaximumVersion":  null,
+    "earlyLaunchAntiMalwareDriverEnabled":  false,
+    "bitLockerEnabled":  true,
+    "secureBootEnabled":  true,
+    "codeIntegrityEnabled":  true,
+    "storageRequireEncryption":  false,
+    "activeFirewallRequired":  true,
+    "defenderEnabled":  true,
+    "defenderVersion":  null,
+    "signatureOutOfDate":  true,
+    "rtpEnabled":  true,
+    "antivirusRequired":  true,
+    "antiSpywareRequired":  true,
+    "deviceThreatProtectionEnabled":  false,
+    "deviceThreatProtectionRequiredSecurityLevel":  "unavailable",
+    "configurationManagerComplianceRequired":  false,
+    "tpmRequired":  true,
+    "deviceCompliancePolicyScript":  null,
+    "validOperatingSystemBuildRanges":  [
+
+                                        ],
+	"scheduledActionsForRule":[{"ruleName":"PasswordRequired","scheduledActionConfigurations":[{"actionType":"block","gracePeriodHours":24,"notificationTemplateId":"","notificationMessageCCList":[]}]}]
+}
+
+"@
+
+####################################################
+
+$WIPMAM = @"
+{
+    "displayName":  "[ITPM Baseline] Windows MAM/without enrollment",
+    "description":  "Use this policy only if you plan to allow unmanaged Windows devices to connect to your corporate data using Microsoft 365 desktop applications. Do not assign this policy until you have added your approved apps and network locations.",
+    "enforcementLevel":  "noProtection",
+    "enterpriseDomain":  "$EnterpriseDomain",
+    "protectionUnderLockConfigRequired":  false,
+    "dataRecoveryCertificate":  null,
+    "revokeOnUnenrollDisabled":  false,
+    "rightsManagementServicesTemplateId":  null,
+    "azureRightsManagementServicesAllowed":  false,
+    "iconsVisible":  true,
+    "enterpriseIPRangesAreAuthoritative":  false,
+    "enterpriseProxyServersAreAuthoritative":  false,
+    "indexingEncryptedStoresOrItemsBlocked":  false,
+    "isAssigned":  false,
+    "revokeOnMdmHandoffDisabled":  true,
+    "mdmEnrollmentUrl":  "https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc",
+    "windowsHelloForBusinessBlocked":  false,
+    "pinMinimumLength":  6,
+    "pinUppercaseLetters":  "notAllow",
+    "pinLowercaseLetters":  "notAllow",
+    "pinSpecialCharacters":  "notAllow",
+    "pinExpirationDays":  0,
+    "numberOfPastPinsRemembered":  0,
+    "passwordMaximumAttemptCount":  0,
+    "minutesOfInactivityBeforeDeviceLock":  0,
+    "daysWithoutContactBeforeUnenroll":  90,
+    "enterpriseProtectedDomainNames":  [
+
+                                       ],
+    "protectedApps":  [
+
+                      ],
+    "exemptApps":  [
+
+                   ],
+    "enterpriseNetworkDomainNames":  [
+
+                                     ],
+    "enterpriseProxiedDomains":  [
+                                     {
+                                         "displayName":  "Microsoft 365",
+                                         "proxiedDomains":  [
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint-my.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint-files.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "outlook.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "outlook.office365.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "attachments.office.net",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "protection.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "tasks.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "teams.microsoft.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "project.microsoft.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.powerbi.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.crm.dynamics.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "/*AppCompat*/",
+                                                                    "proxy":  null
+                                                                }
+                                                            ]
+                                     }
+                                 ],
+    "enterpriseIPRanges":  [
+
+                           ],
+    "enterpriseProxyServers":  [
+
+                               ],
+    "enterpriseInternalProxyServers":  [
+
+                                       ],
+    "neutralDomainResources":  [
+                                   {
+                                       "displayName":  "Microsoft login",
+                                       "resources":  [
+                                                         "login.microsoftonline.com",
+                                                         "login.windows.net"
+                                                     ]
+                                   }
+                               ],
+    "smbAutoEncryptedFileExtensions":  [
+
+                                       ],
+    "protectedAppLockerFiles":  [
+
+                                ],
+    "exemptAppLockerFiles":  [
+
+                             ],
+    "assignments":  [
+
+                    ],
+    "@odata.type":  "#microsoft.graph.windowsInformationProtectionPolicy"
+}
+
+
+"@
+
+####################################################
+
+$WIPMDM = @"
+
+{
+    "displayName":  "[ITPM Baseline] Windows MDM/with enrollment",
+    "description":  "Use this policy to protect corporate data on MDM enrolled devices. Do not assign this policy until you have added your approved apps and network locations.",
+    "enforcementLevel":  "noProtection",
+    "enterpriseDomain":  "$EnterpriseDomain",
+    "protectionUnderLockConfigRequired":  false,
+    "dataRecoveryCertificate":  null,
+    "revokeOnUnenrollDisabled":  false,
+    "rightsManagementServicesTemplateId":  null,
+    "azureRightsManagementServicesAllowed":  false,
+    "iconsVisible":  true,
+    "enterpriseIPRangesAreAuthoritative":  false,
+    "enterpriseProxyServersAreAuthoritative":  false,
+    "indexingEncryptedStoresOrItemsBlocked":  false,
+    "isAssigned":  false,
+    "enterpriseProtectedDomainNames":  [
+
+                                       ],
+    "protectedApps":  [
+
+                      ],
+    "exemptApps":  [
+
+                   ],
+    "enterpriseNetworkDomainNames":  [
+
+                                     ],
+    "enterpriseProxiedDomains":  [
+                                     {
+                                         "displayName":  "Microsoft 365",
+                                         "proxiedDomains":  [
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint-my.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint-files.sharepoint.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "outlook.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "outlook.office365.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "attachments.office.net",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "protection.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "tasks.office.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "teams.microsoft.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "project.microsoft.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.powerbi.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "$Sharepoint.crm.dynamics.com",
+                                                                    "proxy":  null
+                                                                },
+                                                                {
+                                                                    "ipAddressOrFQDN":  "/*AppCompat*/",
+                                                                    "proxy":  null
+                                                                }
+                                                            ]
+                                     }
+                                 ],
+    "enterpriseIPRanges":  [
+
+                           ],
+    "enterpriseProxyServers":  [
+
+                               ],
+    "enterpriseInternalProxyServers":  [
+
+                                       ],
+    "neutralDomainResources":  [
+                                   {
+                                       "displayName":  "Microsoft login",
+                                       "resources":  [
+                                                         "login.microsoftonline.com",
+                                                         "login.windows.net"
+                                                     ]
+                                   }
+                               ],
+    "smbAutoEncryptedFileExtensions":  [
+
+                                       ],
+    "protectedAppLockerFiles":  [
+
+                                ],
+    "exemptAppLockerFiles":  [
+
+                             ],
+    "assignments":  [
+
+                    ],
+    "@odata.type":  "#microsoft.graph.mdmWindowsInformationProtectionPolicy"
+}
+
+
+
+"@
+
+####################################################
+
+$Config_WinAllowReset = @"
+
+{
+    "@odata.type":  "#microsoft.graph.windows10GeneralConfiguration",
+    "deviceManagementApplicabilityRuleOsEdition":  null,
+    "deviceManagementApplicabilityRuleOsVersion":  null,
+    "deviceManagementApplicabilityRuleDeviceMode":  null,
+    "description":  "Assign this policy to Company owned Windows devices. Allows the user to perform a self-service Autopilot reset.",
+    "displayName":  "[ITPM Corporate] Windows: Allow Autopilot Reset",
+    "taskManagerBlockEndTask":  false,
+    "energySaverOnBatteryThresholdPercentage":  null,
+    "energySaverPluggedInThresholdPercentage":  null,
+    "powerLidCloseActionOnBattery":  "notConfigured",
+    "powerLidCloseActionPluggedIn":  "notConfigured",
+    "powerButtonActionOnBattery":  "notConfigured",
+    "powerButtonActionPluggedIn":  "notConfigured",
+    "powerSleepButtonActionOnBattery":  "notConfigured",
+    "powerSleepButtonActionPluggedIn":  "notConfigured",
+    "powerHybridSleepOnBattery":  "notConfigured",
+    "powerHybridSleepPluggedIn":  "notConfigured",
+    "windows10AppsForceUpdateSchedule":  null,
+    "enableAutomaticRedeployment":  true,
+    "microsoftAccountSignInAssistantSettings":  "notConfigured",
+    "authenticationAllowSecondaryDevice":  false,
+    "authenticationWebSignIn":  "notConfigured",
+    "authenticationPreferredAzureADTenantDomainName":  null,
+    "cryptographyAllowFipsAlgorithmPolicy":  false,
+    "displayAppListWithGdiDPIScalingTurnedOn":  [
+
+                                                ],
+    "displayAppListWithGdiDPIScalingTurnedOff":  [
+
+                                                 ],
+    "enterpriseCloudPrintDiscoveryEndPoint":  null,
+    "enterpriseCloudPrintOAuthAuthority":  null,
+    "enterpriseCloudPrintOAuthClientIdentifier":  null,
+    "enterpriseCloudPrintResourceIdentifier":  null,
+    "enterpriseCloudPrintDiscoveryMaxLimit":  null,
+    "enterpriseCloudPrintMopriaDiscoveryResourceIdentifier":  null,
+    "experienceDoNotSyncBrowserSettings":  "notConfigured",
+    "messagingBlockSync":  false,
+    "messagingBlockMMS":  false,
+    "messagingBlockRichCommunicationServices":  false,
+    "printerNames":  [
+
+                     ],
+    "printerDefaultName":  null,
+    "printerBlockAddition":  false,
+    "searchBlockDiacritics":  false,
+    "searchDisableAutoLanguageDetection":  false,
+    "searchDisableIndexingEncryptedItems":  false,
+    "searchEnableRemoteQueries":  false,
+    "searchDisableUseLocation":  false,
+    "searchDisableLocation":  false,
+    "searchDisableIndexerBackoff":  false,
+    "searchDisableIndexingRemovableDrive":  false,
+    "searchEnableAutomaticIndexSizeManangement":  false,
+    "searchBlockWebResults":  false,
+    "findMyFiles":  "notConfigured",
+    "securityBlockAzureADJoinedDevicesAutoEncryption":  false,
+    "diagnosticsDataSubmissionMode":  "userDefined",
+    "oneDriveDisableFileSync":  false,
+    "systemTelemetryProxyServer":  null,
+    "edgeTelemetryForMicrosoft365Analytics":  "notConfigured",
+    "inkWorkspaceAccess":  "notConfigured",
+    "inkWorkspaceAccessState":  "notConfigured",
+    "inkWorkspaceBlockSuggestedApps":  false,
+    "smartScreenEnableAppInstallControl":  false,
+    "smartScreenAppInstallControl":  "notConfigured",
+    "personalizationDesktopImageUrl":  null,
+    "personalizationLockScreenImageUrl":  null,
+    "bluetoothAllowedServices":  [
+
+                                 ],
+    "bluetoothBlockAdvertising":  false,
+    "bluetoothBlockPromptedProximalConnections":  false,
+    "bluetoothBlockDiscoverableMode":  false,
+    "bluetoothBlockPrePairing":  false,
+    "edgeBlockAutofill":  false,
+    "edgeBlocked":  false,
+    "edgeCookiePolicy":  "userDefined",
+    "edgeBlockDeveloperTools":  false,
+    "edgeBlockSendingDoNotTrackHeader":  false,
+    "edgeBlockExtensions":  false,
+    "edgeBlockInPrivateBrowsing":  false,
+    "edgeBlockJavaScript":  false,
+    "edgeBlockPasswordManager":  false,
+    "edgeBlockAddressBarDropdown":  false,
+    "edgeBlockCompatibilityList":  false,
+    "edgeClearBrowsingDataOnExit":  false,
+    "edgeAllowStartPagesModification":  false,
+    "edgeDisableFirstRunPage":  false,
+    "edgeBlockLiveTileDataCollection":  false,
+    "edgeSyncFavoritesWithInternetExplorer":  false,
+    "edgeFavoritesListLocation":  null,
+    "edgeBlockEditFavorites":  false,
+    "edgeNewTabPageURL":  null,
+    "edgeHomeButtonConfiguration":  null,
+    "edgeHomeButtonConfigurationEnabled":  false,
+    "edgeOpensWith":  "notConfigured",
+    "edgeBlockSideloadingExtensions":  false,
+    "edgeRequiredExtensionPackageFamilyNames":  [
+
+                                                ],
+    "edgeBlockPrinting":  false,
+    "edgeFavoritesBarVisibility":  "notConfigured",
+    "edgeBlockSavingHistory":  false,
+    "edgeBlockFullScreenMode":  false,
+    "edgeBlockWebContentOnNewTabPage":  false,
+    "edgeBlockTabPreloading":  false,
+    "edgeBlockPrelaunch":  false,
+    "edgeShowMessageWhenOpeningInternetExplorerSites":  "notConfigured",
+    "edgePreventCertificateErrorOverride":  false,
+    "edgeKioskModeRestriction":  "notConfigured",
+    "edgeKioskResetAfterIdleTimeInMinutes":  null,
+    "cellularBlockDataWhenRoaming":  false,
+    "cellularBlockVpn":  false,
+    "cellularBlockVpnWhenRoaming":  false,
+    "cellularData":  "allowed",
+    "defenderRequireRealTimeMonitoring":  false,
+    "defenderRequireBehaviorMonitoring":  false,
+    "defenderRequireNetworkInspectionSystem":  false,
+    "defenderScanDownloads":  false,
+    "defenderScheduleScanEnableLowCpuPriority":  false,
+    "defenderDisableCatchupQuickScan":  false,
+    "defenderDisableCatchupFullScan":  false,
+    "defenderScanScriptsLoadedInInternetExplorer":  false,
+    "defenderBlockEndUserAccess":  false,
+    "defenderSignatureUpdateIntervalInHours":  null,
+    "defenderMonitorFileActivity":  "userDefined",
+    "defenderDaysBeforeDeletingQuarantinedMalware":  null,
+    "defenderScanMaxCpu":  null,
+    "defenderScanArchiveFiles":  false,
+    "defenderScanIncomingMail":  false,
+    "defenderScanRemovableDrivesDuringFullScan":  false,
+    "defenderScanMappedNetworkDrivesDuringFullScan":  false,
+    "defenderScanNetworkFiles":  false,
+    "defenderRequireCloudProtection":  false,
+    "defenderCloudBlockLevel":  "notConfigured",
+    "defenderCloudExtendedTimeout":  null,
+    "defenderCloudExtendedTimeoutInSeconds":  null,
+    "defenderPromptForSampleSubmission":  "userDefined",
+    "defenderScheduledQuickScanTime":  null,
+    "defenderScanType":  "userDefined",
+    "defenderSystemScanSchedule":  "userDefined",
+    "defenderScheduledScanTime":  null,
+    "defenderPotentiallyUnwantedAppAction":  null,
+    "defenderPotentiallyUnwantedAppActionSetting":  "userDefined",
+    "defenderSubmitSamplesConsentType":  "sendSafeSamplesAutomatically",
+    "defenderBlockOnAccessProtection":  false,
+    "defenderDetectedMalwareActions":  null,
+    "defenderFileExtensionsToExclude":  [
+
+                                        ],
+    "defenderFilesAndFoldersToExclude":  [
+
+                                         ],
+    "defenderProcessesToExclude":  [
+
+                                   ],
+    "lockScreenAllowTimeoutConfiguration":  false,
+    "lockScreenBlockActionCenterNotifications":  false,
+    "lockScreenBlockCortana":  false,
+    "lockScreenBlockToastNotifications":  false,
+    "lockScreenTimeoutInSeconds":  null,
+    "lockScreenActivateAppsWithVoice":  "notConfigured",
+    "passwordBlockSimple":  false,
+    "passwordExpirationDays":  null,
+    "passwordMinimumLength":  null,
+    "passwordMinutesOfInactivityBeforeScreenTimeout":  null,
+    "passwordMinimumCharacterSetCount":  null,
+    "passwordPreviousPasswordBlockCount":  null,
+    "passwordRequired":  false,
+    "passwordRequireWhenResumeFromIdleState":  false,
+    "passwordRequiredType":  "deviceDefault",
+    "passwordSignInFailureCountBeforeFactoryReset":  null,
+    "passwordMinimumAgeInDays":  null,
+    "privacyAdvertisingId":  "notConfigured",
+    "privacyAutoAcceptPairingAndConsentPrompts":  false,
+    "privacyDisableLaunchExperience":  false,
+    "privacyBlockInputPersonalization":  false,
+    "privacyBlockPublishUserActivities":  false,
+    "privacyBlockActivityFeed":  false,
+    "activateAppsWithVoice":  "notConfigured",
+    "startBlockUnpinningAppsFromTaskbar":  false,
+    "startMenuAppListVisibility":  "userDefined",
+    "startMenuHideChangeAccountSettings":  false,
+    "startMenuHideFrequentlyUsedApps":  false,
+    "startMenuHideHibernate":  false,
+    "startMenuHideLock":  false,
+    "startMenuHidePowerButton":  false,
+    "startMenuHideRecentJumpLists":  false,
+    "startMenuHideRecentlyAddedApps":  false,
+    "startMenuHideRestartOptions":  false,
+    "startMenuHideShutDown":  false,
+    "startMenuHideSignOut":  false,
+    "startMenuHideSleep":  false,
+    "startMenuHideSwitchAccount":  false,
+    "startMenuHideUserTile":  false,
+    "startMenuLayoutEdgeAssetsXml":  null,
+    "startMenuLayoutXml":  null,
+    "startMenuMode":  "userDefined",
+    "startMenuPinnedFolderDocuments":  "notConfigured",
+    "startMenuPinnedFolderDownloads":  "notConfigured",
+    "startMenuPinnedFolderFileExplorer":  "notConfigured",
+    "startMenuPinnedFolderHomeGroup":  "notConfigured",
+    "startMenuPinnedFolderMusic":  "notConfigured",
+    "startMenuPinnedFolderNetwork":  "notConfigured",
+    "startMenuPinnedFolderPersonalFolder":  "notConfigured",
+    "startMenuPinnedFolderPictures":  "notConfigured",
+    "startMenuPinnedFolderSettings":  "notConfigured",
+    "startMenuPinnedFolderVideos":  "notConfigured",
+    "settingsBlockSettingsApp":  false,
+    "settingsBlockSystemPage":  false,
+    "settingsBlockDevicesPage":  false,
+    "settingsBlockNetworkInternetPage":  false,
+    "settingsBlockPersonalizationPage":  false,
+    "settingsBlockAccountsPage":  false,
+    "settingsBlockTimeLanguagePage":  false,
+    "settingsBlockEaseOfAccessPage":  false,
+    "settingsBlockPrivacyPage":  false,
+    "settingsBlockUpdateSecurityPage":  false,
+    "settingsBlockAppsPage":  false,
+    "settingsBlockGamingPage":  false,
+    "windowsSpotlightBlockConsumerSpecificFeatures":  false,
+    "windowsSpotlightBlocked":  false,
+    "windowsSpotlightBlockOnActionCenter":  false,
+    "windowsSpotlightBlockTailoredExperiences":  false,
+    "windowsSpotlightBlockThirdPartyNotifications":  false,
+    "windowsSpotlightBlockWelcomeExperience":  false,
+    "windowsSpotlightBlockWindowsTips":  false,
+    "windowsSpotlightConfigureOnLockScreen":  "notConfigured",
+    "networkProxyApplySettingsDeviceWide":  false,
+    "networkProxyDisableAutoDetect":  false,
+    "networkProxyAutomaticConfigurationUrl":  null,
+    "networkProxyServer":  null,
+    "accountsBlockAddingNonMicrosoftAccountEmail":  true,
+    "antiTheftModeBlocked":  false,
+    "bluetoothBlocked":  false,
+    "cameraBlocked":  false,
+    "connectedDevicesServiceBlocked":  false,
+    "certificatesBlockManualRootCertificateInstallation":  false,
+    "copyPasteBlocked":  false,
+    "cortanaBlocked":  false,
+    "deviceManagementBlockFactoryResetOnMobile":  false,
+    "deviceManagementBlockManualUnenroll":  false,
+    "safeSearchFilter":  "userDefined",
+    "edgeBlockPopups":  false,
+    "edgeBlockSearchSuggestions":  false,
+    "edgeBlockSearchEngineCustomization":  false,
+    "edgeBlockSendingIntranetTrafficToInternetExplorer":  false,
+    "edgeSendIntranetTrafficToInternetExplorer":  false,
+    "edgeRequireSmartScreen":  false,
+    "edgeEnterpriseModeSiteListLocation":  null,
+    "edgeFirstRunUrl":  null,
+    "edgeSearchEngine":  null,
+    "edgeHomepageUrls":  [
+
+                         ],
+    "edgeBlockAccessToAboutFlags":  false,
+    "smartScreenBlockPromptOverride":  false,
+    "smartScreenBlockPromptOverrideForFiles":  false,
+    "webRtcBlockLocalhostIpAddress":  false,
+    "internetSharingBlocked":  false,
+    "settingsBlockAddProvisioningPackage":  false,
+    "settingsBlockRemoveProvisioningPackage":  false,
+    "settingsBlockChangeSystemTime":  false,
+    "settingsBlockEditDeviceName":  false,
+    "settingsBlockChangeRegion":  false,
+    "settingsBlockChangeLanguage":  false,
+    "settingsBlockChangePowerSleep":  false,
+    "locationServicesBlocked":  false,
+    "microsoftAccountBlocked":  false,
+    "microsoftAccountBlockSettingsSync":  false,
+    "nfcBlocked":  false,
+    "resetProtectionModeBlocked":  false,
+    "screenCaptureBlocked":  false,
+    "storageBlockRemovableStorage":  false,
+    "storageRequireMobileDeviceEncryption":  false,
+    "usbBlocked":  false,
+    "voiceRecordingBlocked":  false,
+    "wiFiBlockAutomaticConnectHotspots":  false,
+    "wiFiBlocked":  false,
+    "wiFiBlockManualConfiguration":  false,
+    "wiFiScanInterval":  null,
+    "wirelessDisplayBlockProjectionToThisDevice":  false,
+    "wirelessDisplayBlockUserInputFromReceiver":  false,
+    "wirelessDisplayRequirePinForPairing":  false,
+    "windowsStoreBlocked":  false,
+    "appsAllowTrustedAppsSideloading":  "notConfigured",
+    "windowsStoreBlockAutoUpdate":  false,
+    "developerUnlockSetting":  "blocked",
+    "sharedUserAppDataAllowed":  true,
+    "appsBlockWindowsStoreOriginatedApps":  false,
+    "windowsStoreEnablePrivateStoreOnly":  false,
+    "storageRestrictAppDataToSystemVolume":  false,
+    "storageRestrictAppInstallToSystemVolume":  false,
+    "gameDvrBlocked":  false,
+    "experienceBlockDeviceDiscovery":  false,
+    "experienceBlockErrorDialogWhenNoSIM":  false,
+    "experienceBlockTaskSwitcher":  false,
+    "logonBlockFastUserSwitching":  false,
+    "tenantLockdownRequireNetworkDuringOutOfBoxExperience":  true,
+    "appManagementMSIAllowUserControlOverInstall":  false,
+    "appManagementMSIAlwaysInstallWithElevatedPrivileges":  false,
+    "dataProtectionBlockDirectMemoryAccess":  true,
+    "appManagementPackageFamilyNamesToLaunchAfterLogOn":  [
+
+                                                          ],
+    "uninstallBuiltInApps":  false,
+    "configureTimeZone":  null
+}
+
+
+"@
+
+####################################################
+
+$Config_WinDisableAnimation = @"
+
+{
+    "@odata.type":  "#microsoft.graph.windows10CustomConfiguration",
+    "deviceManagementApplicabilityRuleOsEdition":  null,
+    "deviceManagementApplicabilityRuleOsVersion":  null,
+    "deviceManagementApplicabilityRuleDeviceMode":  null,
+    "description":  "Assign this profile to Company owned Windows devices. Prevents the sign-in animation sequence for users signing into the device for the first time.",
+    "displayName":  "[ITPM Corporate] Windows: Disable first sign-in animation",
+    "omaSettings":  [
+                        {
+                            "@odata.type":  "#microsoft.graph.omaSettingInteger",
+                            "displayName":  "EnableFirstLogonAnimation",
+                            "description":  "Disable first sign-in animation",
+                            "omaUri":  "./Device/Vendor/MSFT/Policy/Config/WindowsLogon/EnableFirstLogonAnimation",
+                            "isEncrypted":  false,
+                            "value":  0,
+                            "isReadOnly":  false
+                        }
+                    ]
+}
+
+
+"@
+
+####################################################
+
+$Config_WinMDMWins = @"
+
+{
+    "@odata.type":  "#microsoft.graph.windows10CustomConfiguration",
+    "deviceManagementApplicabilityRuleOsEdition":  null,
+    "deviceManagementApplicabilityRuleOsVersion":  null,
+    "deviceManagementApplicabilityRuleDeviceMode":  null,
+    "description":  "Assign this profile to Hybrid Azure AD Joined Windows devices. Allows MDM settings to override conflicts with Group Policy.",
+    "displayName":  "[ITPM Corporate] Windows: MDM wins over Group Policy",
+    "omaSettings":  [
+                        {
+                            "@odata.type":  "#microsoft.graph.omaSettingInteger",
+                            "displayName":  "ControlPolicyConflict/MDMWinsOverGP",
+                            "description":  "MDMWinsOverGP",
+                            "omaUri":  "./Device/Vendor/MSFT/Policy/Config/ControlPolicyConflict/MDMWinsOverGP",
+                            "isEncrypted":  false,
+                            "value":  1,
+                            "isReadOnly":  false
+                        }
+                    ]
+}
+
+"@
+
+####################################################
+
+$Config_WinDefaultUpdate = @"
+{
+    "@odata.type":  "#microsoft.graph.windowsUpdateForBusinessConfiguration",
+    "deviceManagementApplicabilityRuleOsEdition":  null,
+    "deviceManagementApplicabilityRuleOsVersion":  null,
+    "deviceManagementApplicabilityRuleDeviceMode":  null,
+    "description":  "Applies updates via the Semi-annual channel without delay.",
+    "displayName":  "[ITPM Corporate] Default Update Ring",
+    "deliveryOptimizationMode":  "userDefined",
+    "prereleaseFeatures":  "userDefined",
+    "automaticUpdateMode":  "autoInstallAtMaintenanceTime",
+    "microsoftUpdateServiceAllowed":  true,
+    "driversExcluded":  false,
+    "qualityUpdatesDeferralPeriodInDays":  0,
+    "featureUpdatesDeferralPeriodInDays":  0,
+    "qualityUpdatesPaused":  false,
+    "featureUpdatesPaused":  false,
+    "qualityUpdatesPauseExpiryDateTime":  "0001-01-01T00:00:00Z",
+    "featureUpdatesPauseExpiryDateTime":  "0001-01-01T00:00:00Z",
+    "businessReadyUpdatesOnly":  "businessReadyOnly",
+    "skipChecksBeforeRestart":  false,
+    "updateWeeks":  null,
+    "qualityUpdatesPauseStartDate":  null,
+    "featureUpdatesPauseStartDate":  null,
+    "featureUpdatesRollbackWindowInDays":  21,
+    "qualityUpdatesWillBeRolledBack":  false,
+    "featureUpdatesWillBeRolledBack":  false,
+    "qualityUpdatesRollbackStartDateTime":  "0001-01-01T00:00:00Z",
+    "featureUpdatesRollbackStartDateTime":  "0001-01-01T00:00:00Z",
+    "engagedRestartDeadlineInDays":  null,
+    "engagedRestartSnoozeScheduleInDays":  null,
+    "engagedRestartTransitionScheduleInDays":  null,
+    "deadlineForFeatureUpdatesInDays":  null,
+    "deadlineForQualityUpdatesInDays":  null,
+    "deadlineGracePeriodInDays":  null,
+    "postponeRebootUntilAfterDeadline":  null,
+    "autoRestartNotificationDismissal":  "notConfigured",
+    "scheduleRestartWarningInHours":  4,
+    "scheduleImminentRestartWarningInMinutes":  15,
+    "userPauseAccess":  "enabled",
+    "userWindowsUpdateScanAccess":  "enabled",
+    "updateNotificationLevel":  "restartWarningsOnly",
+    "installationSchedule":  {
+                                 "@odata.type":  "#microsoft.graph.windowsUpdateActiveHoursInstall",
+                                 "activeHoursStart":  "08:00:00.0000000",
+                                 "activeHoursEnd":  "18:00:00.0000000"
+                             }
+}
+
+
+"@
+
+####################################################
+
+$Config_WinDelayedUpdate = @"
+
+{
+    "@odata.type":  "#microsoft.graph.windowsUpdateForBusinessConfiguration",
+    "deviceManagementApplicabilityRuleOsEdition":  null,
+    "deviceManagementApplicabilityRuleOsVersion":  null,
+    "deviceManagementApplicabilityRuleDeviceMode":  null,
+    "description":  "This update ring delays quality updates by one week and feature updates by two weeks.",
+    "displayName":  "[ITPM Corporate] Delayed Update Ring",
+    "deliveryOptimizationMode":  "userDefined",
+    "prereleaseFeatures":  "userDefined",
+    "automaticUpdateMode":  "autoInstallAtMaintenanceTime",
+    "microsoftUpdateServiceAllowed":  true,
+    "driversExcluded":  false,
+    "qualityUpdatesDeferralPeriodInDays":  7,
+    "featureUpdatesDeferralPeriodInDays":  14,
+    "qualityUpdatesPaused":  false,
+    "featureUpdatesPaused":  false,
+    "qualityUpdatesPauseExpiryDateTime":  "0001-01-01T00:00:00Z",
+    "featureUpdatesPauseExpiryDateTime":  "0001-01-01T00:00:00Z",
+    "businessReadyUpdatesOnly":  "businessReadyOnly",
+    "skipChecksBeforeRestart":  false,
+    "updateWeeks":  null,
+    "qualityUpdatesPauseStartDate":  null,
+    "featureUpdatesPauseStartDate":  null,
+    "featureUpdatesRollbackWindowInDays":  21,
+    "qualityUpdatesWillBeRolledBack":  false,
+    "featureUpdatesWillBeRolledBack":  false,
+    "qualityUpdatesRollbackStartDateTime":  "0001-01-01T00:00:00Z",
+    "featureUpdatesRollbackStartDateTime":  "0001-01-01T00:00:00Z",
+    "engagedRestartDeadlineInDays":  null,
+    "engagedRestartSnoozeScheduleInDays":  null,
+    "engagedRestartTransitionScheduleInDays":  null,
+    "deadlineForFeatureUpdatesInDays":  null,
+    "deadlineForQualityUpdatesInDays":  null,
+    "deadlineGracePeriodInDays":  null,
+    "postponeRebootUntilAfterDeadline":  null,
+    "autoRestartNotificationDismissal":  "notConfigured",
+    "scheduleRestartWarningInHours":  4,
+    "scheduleImminentRestartWarningInMinutes":  15,
+    "userPauseAccess":  "enabled",
+    "userWindowsUpdateScanAccess":  "enabled",
+    "updateNotificationLevel":  "restartWarningsOnly",
+    "installationSchedule":  {
+                                 "@odata.type":  "#microsoft.graph.windowsUpdateActiveHoursInstall",
+                                 "activeHoursStart":  "08:00:00.0000000",
+                                 "activeHoursEnd":  "18:00:00.0000000"
+                             }
+}
+
+
+"@
+
+####################################################
+
+$GPO_ODfBClient = @"
+[
+{
+    "definition@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('81c07ba0-7512-402d-b1f6-00856975cfab')",
+    "enabled":  "true"
+},
+{
+    "definition@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('61b07a01-7e60-4127-b086-f6b32458a5c5')",
+    "enabled":  "true"
+},
+{
+    "definition@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('2ce2f507-aae8-49a1-98ce-dc3faafcd331')",
+    "enabled":  "true"
+},
+{
+    "definition@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('24bec81e-a596-4fc1-867b-0256114a19a4')",
+    "enabled":  "true",
+    "presentationValues":  [
+                               {
+                                   "@odata.type":  "#microsoft.graph.groupPolicyPresentationValueText",
+                                   "value":  "$TenantID",
+                                   "presentation@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('24bec81e-a596-4fc1-867b-0256114a19a4')/presentations('4640c3f7-b89a-41be-948b-e86a2a97cae4')"
+                               }
+                           ]
+},
+{
+    "definition@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('39147fa2-6c5e-437b-8264-19b50b891709')",
+    "enabled":  "true",
+    "presentationValues":  [
+                               {
+                                   "@odata.type":  "#microsoft.graph.groupPolicyPresentationValueText",
+                                   "value":  "$TenantID",
+                                   "presentation@odata.bind":  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('39147fa2-6c5e-437b-8264-19b50b891709')/presentations('fbefbbdf-5382-477c-8b6c-71f4a06e2805')"
+                               }
+                           ]
+}
+]
+"@
+
+####################################################
+
+$Office32 = @"
+
+{
+
+  "@odata.type": "#microsoft.graph.officeSuiteApp",
+
+  "autoAcceptEula": true,
+
+  "description": "[ITPM Corporate] 32-bit Microsoft 365 Desktop apps",
+
+  "developer": "Microsoft",
+
+  "displayName": "[ITPM Corporate] 32-bit Microsoft 365 Desktop apps",
+
+  "excludedApps": {
+
+    "groove": true,
+
+    "infoPath": true,
+
+    "sharePointDesigner": true,
+
+    "lync":  true
+
+  },
+
+  "informationUrl": "",
+
+  "isFeatured": false,
+
+  "largeIcon": {
+
+    "type": "image/png",
+
+    "value": "iVBORw0KGgoAAAANSUhEUgAAAF0AAAAeCAMAAAEOZNKlAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAJhUExURf////7z7/i9qfF1S/KCW/i+qv3q5P/9/PrQwfOMae1RG+s8AOxGDfBtQPWhhPvUx/759/zg1vWgg+9fLu5WIvKFX/rSxP728/nCr/FyR+tBBvOMaO1UH+1RHOs+AvSScP3u6f/+/v3s5vzg1+xFDO9kNPOOa/i7pvzj2/vWyes9Af76+Pzh2PrTxf/6+f7y7vOGYexHDv3t5+1SHfi8qPOIZPvb0O1NFuxDCe9hMPSVdPnFs/3q4/vaz/STcu5VIe5YJPWcfv718v/9/e1MFfF4T/F4TvF2TP3o4exECvF0SexIEPONavzn3/vZze1QGvF3Te5dK+5cKvrPwPrQwvKAWe1OGPexmexKEveulfezm/BxRfamiuxLE/apj/zf1e5YJfSXd/OHYv3r5feznPakiPze1P7x7f739f3w6+xJEfnEsvWdf/Wfge1LFPe1nu9iMvnDsfBqPOs/BPOIY/WZevJ/V/zl3fnIt/vTxuxHD+xEC+9mN+5ZJv749vBpO/KBWvBwRP/8+/SUc/etlPjArP/7+vOLZ/F7UvWae/708e1OF/aihvSWdvi8p+tABfSZefvVyPWihfSVde9lNvami+9jM/zi2fKEXvBuQvOKZvalifF5UPJ/WPSPbe9eLfrKuvvd0uxBB/7w7Pzj2vrRw/rOv+1PGfi/q/eymu5bKf3n4PnJuPBrPf3t6PWfgvWegOxCCO9nOO9oOfaskvSYePi5pPi2oPnGtO5eLPevlvKDXfrNvv739Pzd0/708O9gL+9lNfJ9VfrLu/OPbPnDsPBrPus+A/nArfarkQAAAGr5HKgAAADLdFJOU/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AvuakogAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAz5JREFUOE+tVTtu4zAQHQjppmWzwIJbEVCzpTpjbxD3grQHSOXKRXgCAT6EC7UBVAmp3KwBnmvfzNCyZTmxgeTZJsXx43B+HBHRE34ZkXgkerXFTheeiCkRrbB4UXmp4wSWz5raaQEMTM5TZwuiXoaKgV+6FsmkZQcSy0kA71yMTMGHanX+AzMMGLAQCxU1F/ZwjULPugazl82GM0NEKm/U8EqFwEkO3/EAT4grgl0nucwlk9pcpTTJ4VPA4g/Rb3yIRhhp507e9nTQmZ1OS5RO4sS7nIRPEeHXCHdkw9ZEW2yVE5oIS7peD58Avs7CN+PVCmHh21oOqBdjDzIs+FldPJ74TFESUSJEfVzy9U/dhu+AuOT6eBp6gGKyXEx8euO450ZE4CMfstMFT44broWw/itkYErWXRx+fFArt9Ca9os78TFed0LVIUsmIHrwbwaw3BEOnOk94qVpQ6Ka2HjxewJnfyd6jUtGDQLdWlzmYNYLeKbbGOucJsNabCq1Yub0o92rtR+i30V2dapxYVEePXcOjeCKPnYyit7BtKeNlZqHbr+gt7i+AChWA9RsRs03pxTQc67ouWpxyESvjK5Vs3DVSy3IpkxPm5X+wZoBi+MFHWW69/w8FRhc7VBe6HAhMB2b8Q0XqDzTNZtXUMnKMjwKVaCrB/CSUL7WSx/HsdJC86lFGXwnioTeOMPjV+szlFvrZLA5VMVK4y+41l4e1xfx7Z88o4hkilRUH/qKqwNVlgDgpvYCpH3XwAy5eMCRnezIUxffVXoDql2rTHFDO+pjWnTWzAfrYXn6BFECblUpWGrvPZvBipETjS5ydM7tdXpH41ZCEbBNy/+wFZu71QO2t9pgT+iZEf657Q1vpN94PQNDxUHeKR103LV9nPVOtDikcNKO+2naCw7yKBhOe9Hm79pe8C4/CfC2wDjXnqC94kEeBU3WwN7dt/2UScXas7zDl5GpkY+M8WKv2J7fd4Ib2rGTk+jsC2cleEM7jI9veF7B0MBJrsZqfKd/81q9pR2NZfwJK2JzsmIT1Ns8jUH0UusQBpU8d2JzsHiXg1zXGLqxfitUNTDT/nUUeqDBp2HZVr+Ocqi/Ty3Rf4Jn82xxfSNtAAAAAElFTkSuQmCC"
+
+  },
+
+  "localesToInstall": [
+
+    "en-us"
+
+  ],
+
+  "notes": "",
+
+  "officePlatformArchitecture": "x86",
+
+  "owner": "Microsoft",
+
+  "privacyInformationUrl": "",
+
+  "productIds": [
+
+    "o365ProPlusRetail"
+
+  ],
+
+  "publisher": "Microsoft",
+
+  "updateChannel": "current",
+
+  "useSharedComputerActivation": true
+
+}
+
+
+
+"@
+
+####################################################
+
+$Office64 = @"
+
+
+
+{
+
+  "@odata.type": "#microsoft.graph.officeSuiteApp",
+
+  "autoAcceptEula": true,
+
+  "description": "[ITPM Corporate] 64-bit Microsoft 365 Desktop apps",
+
+  "developer": "Microsoft",
+
+  "displayName": "[ITPM Corporate] 64-bit Microsoft 365 Desktop apps",
+
+  "excludedApps": {
+
+    "groove": true,
+
+    "infoPath": true,
+
+    "lync":  true,
+
+    "sharePointDesigner": true
+
+  },
+
+  "informationUrl": "",
+
+  "isFeatured": false,
+
+  "largeIcon": {
+
+    "type": "image/png",
+
+    "value": "iVBORw0KGgoAAAANSUhEUgAAAF0AAAAeCAMAAAEOZNKlAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAJhUExURf////7z7/i9qfF1S/KCW/i+qv3q5P/9/PrQwfOMae1RG+s8AOxGDfBtQPWhhPvUx/759/zg1vWgg+9fLu5WIvKFX/rSxP728/nCr/FyR+tBBvOMaO1UH+1RHOs+AvSScP3u6f/+/v3s5vzg1+xFDO9kNPOOa/i7pvzj2/vWyes9Af76+Pzh2PrTxf/6+f7y7vOGYexHDv3t5+1SHfi8qPOIZPvb0O1NFuxDCe9hMPSVdPnFs/3q4/vaz/STcu5VIe5YJPWcfv718v/9/e1MFfF4T/F4TvF2TP3o4exECvF0SexIEPONavzn3/vZze1QGvF3Te5dK+5cKvrPwPrQwvKAWe1OGPexmexKEveulfezm/BxRfamiuxLE/apj/zf1e5YJfSXd/OHYv3r5feznPakiPze1P7x7f739f3w6+xJEfnEsvWdf/Wfge1LFPe1nu9iMvnDsfBqPOs/BPOIY/WZevJ/V/zl3fnIt/vTxuxHD+xEC+9mN+5ZJv749vBpO/KBWvBwRP/8+/SUc/etlPjArP/7+vOLZ/F7UvWae/708e1OF/aihvSWdvi8p+tABfSZefvVyPWihfSVde9lNvami+9jM/zi2fKEXvBuQvOKZvalifF5UPJ/WPSPbe9eLfrKuvvd0uxBB/7w7Pzj2vrRw/rOv+1PGfi/q/eymu5bKf3n4PnJuPBrPf3t6PWfgvWegOxCCO9nOO9oOfaskvSYePi5pPi2oPnGtO5eLPevlvKDXfrNvv739Pzd0/708O9gL+9lNfJ9VfrLu/OPbPnDsPBrPus+A/nArfarkQAAAGr5HKgAAADLdFJOU/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AvuakogAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAz5JREFUOE+tVTtu4zAQHQjppmWzwIJbEVCzpTpjbxD3grQHSOXKRXgCAT6EC7UBVAmp3KwBnmvfzNCyZTmxgeTZJsXx43B+HBHRE34ZkXgkerXFTheeiCkRrbB4UXmp4wSWz5raaQEMTM5TZwuiXoaKgV+6FsmkZQcSy0kA71yMTMGHanX+AzMMGLAQCxU1F/ZwjULPugazl82GM0NEKm/U8EqFwEkO3/EAT4grgl0nucwlk9pcpTTJ4VPA4g/Rb3yIRhhp507e9nTQmZ1OS5RO4sS7nIRPEeHXCHdkw9ZEW2yVE5oIS7peD58Avs7CN+PVCmHh21oOqBdjDzIs+FldPJ74TFESUSJEfVzy9U/dhu+AuOT6eBp6gGKyXEx8euO450ZE4CMfstMFT44broWw/itkYErWXRx+fFArt9Ca9os78TFed0LVIUsmIHrwbwaw3BEOnOk94qVpQ6Ka2HjxewJnfyd6jUtGDQLdWlzmYNYLeKbbGOucJsNabCq1Yub0o92rtR+i30V2dapxYVEePXcOjeCKPnYyit7BtKeNlZqHbr+gt7i+AChWA9RsRs03pxTQc67ouWpxyESvjK5Vs3DVSy3IpkxPm5X+wZoBi+MFHWW69/w8FRhc7VBe6HAhMB2b8Q0XqDzTNZtXUMnKMjwKVaCrB/CSUL7WSx/HsdJC86lFGXwnioTeOMPjV+szlFvrZLA5VMVK4y+41l4e1xfx7Z88o4hkilRUH/qKqwNVlgDgpvYCpH3XwAy5eMCRnezIUxffVXoDql2rTHFDO+pjWnTWzAfrYXn6BFECblUpWGrvPZvBipETjS5ydM7tdXpH41ZCEbBNy/+wFZu71QO2t9pgT+iZEf657Q1vpN94PQNDxUHeKR103LV9nPVOtDikcNKO+2naCw7yKBhOe9Hm79pe8C4/CfC2wDjXnqC94kEeBU3WwN7dt/2UScXas7zDl5GpkY+M8WKv2J7fd4Ib2rGTk+jsC2cleEM7jI9veF7B0MBJrsZqfKd/81q9pR2NZfwJK2JzsmIT1Ns8jUH0UusQBpU8d2JzsHiXg1zXGLqxfitUNTDT/nUUeqDBp2HZVr+Ocqi/Ty3Rf4Jn82xxfSNtAAAAAElFTkSuQmCC"
+
+  },
+
+  "localesToInstall": [
+
+    "en-us"
+
+  ],
+
+  "notes": "",
+
+  "officePlatformArchitecture": "x64",
+
+  "owner": "Microsoft",
+
+  "privacyInformationUrl": "",
+
+  "productIds": [
+
+    "o365ProPlusRetail"
+
+  ],
+
+  "publisher": "Microsoft",
+
+  "updateChannel": "current",
+
+  "useSharedComputerActivation": true
+
+}
+
+
+
+"@
+
+####################################################
+
+$ChrEdge = @"
+
+{
+    "@odata.context":  "https://graph.microsoft.com/Beta/$metadata#deviceAppManagement/mobileApps/$entity",
+    "@odata.type":  "#microsoft.graph.windowsMicrosoftEdgeApp",
+    "displayName":  "[ITPM Corporate] Chromium Edge for Windows",
+    "description":  "Microsoft Edge is the browser for business with modern and legacy web compatibility, new privacy features such as Tracking prevention, and built-in productivity tools such as enterprise-grade PDF support and access to Office and corporate search right from a new tab.",
+    "publisher":  "Microsoft",
+    "isFeatured":  false,
+    "privacyInformationUrl":  "https://privacy.microsoft.com/en-US/privacystatement",
+    "informationUrl":  "https://www.microsoft.com/en-us/windows/microsoft-edge",
+    "developer":  "Microsoft",
+    "isAssigned":  false,
+    "dependentAppCount":  0,
+    "channel":  "stable",
+    "displayLanguageLocale":  null
+}
+
+"@
+
+####################################################
+
 $SB_WinBase = @"
 
 {
-    "displayName":  "[ITPM Corporate] Modified Baseline for Windows 10",
-    "description":  "Assign this profile to Company owned Windows 10 devices. This baseline has been modified to remove overlap with other Endpoint Security profiles; for example BitLocker, Firewall, Microsoft Defender settings, etc.",
+    "displayName":  "[ITPM Corporate] Modified Baseline for Windows OS",
+    "description":  "Assign this profile to Company owned Windows devices. This baseline has been modified to remove overlap with other Endpoint Security profiles; for example BitLocker, Firewall, Microsoft Defender settings and more.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
@@ -2411,7 +4266,7 @@ $SB_EdgeBase = @"
 
 {
     "displayName":  "[ITPM Corporate] Edge Chromium baseline",
-    "description":  "Assign this profile to Company owned Windows 10 devices. WARNING: This policy will disable all browser extensions by default; create a Device configuration profile to allow specific extensions to be installed from the Edge add-ons store.",
+    "description":  "Assign this profile to Company owned Windows devices. WARNING: This policy will disable all browser extensions by default; create a Device configuration profile to allow specific extensions to be installed from the Edge add-ons store.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementCollectionSettingInstance",
@@ -2543,7 +4398,7 @@ $ES_Antivirus = @"
 
 {
     "displayName":  "[ITPM Corporate] Microsoft Defender Antivirus",
-    "description":  "Assign this policy to Company owned Windows 10 devices.",
+    "description":  "Assign this policy to Company owned Windows devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
@@ -2820,7 +4675,7 @@ $ES_SecurityCenter = @"
 
 {
     "displayName":  "[ITPM Corporate] Windows Security Center",
-    "description":  "Assign this profile to Company owned Windows 10 devices.",
+    "description":  "Assign this profile to Company owned Windows devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
@@ -2959,7 +4814,7 @@ $ES_SecurityCenter = @"
 $ES_BitLocker = @"
 {
     "displayName":  "[ITPM Corporate] BitLocker silent enablement",
-    "description":  "Assign this policy to Company owned Windows 10 devices.",
+    "description":  "Assign this policy to Company owned Windows devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
@@ -3353,7 +5208,7 @@ $ES_Firewall = @"
 
 {
     "displayName":  "[ITPM Corporate] Windows Firewall",
-    "description":  "Assign this policy to Company owned Windows 10 devices.",
+    "description":  "Assign this policy to Company owned Windows devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
@@ -3696,7 +5551,7 @@ $ES_ASRAudit = @"
 
 {
     "displayName":  "[ITPM Corporate] Audit ASR Rules",
-    "description":  "Assign this policy to Company owned Windows 10 devices. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
+    "description":  "Assign this policy to Company owned Windows devices. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
@@ -3840,7 +5695,7 @@ $ES_ASRAudit = @"
 $ES_ASREnable = @"
 {
     "displayName":  "[ITPM Corporate] Enable ASR Rules",
-    "description":  "Assign this policy to Company owned Windows 10 devices. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
+    "description":  "Assign this policy to Company owned Windows devices. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
@@ -3984,7 +5839,7 @@ $ES_DeviceControl = @"
 
 {
     "displayName":  "[ITPM Corporate] Optional: Block removable storage",
-    "description":  "Assign this policy to Company owned Windows 10 devices. This policy will block removable storage devices.",
+    "description":  "This policy will block removable storage devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementAbstractComplexSettingInstance",
@@ -4117,81 +5972,11 @@ $ES_DeviceControl = @"
 
 ####################################################
 
-$ES_SmartLockerAudit = @"
-
-{
-    "displayName":  "[ITPM Corporate] Audit SmartLocker",
-    "description":  "Assign this policy to Company owned Windows 10 devices. WARNING: Reboot required. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
-    "settingsDelta":  [
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "d0ff1ed6-327f-4432-8ed6-132906e14a5b",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_appLockerApplicationControl",
-                              "valueJson":  "\"auditComponentsStoreAppsAndSmartlocker\"",
-                              "value":  "auditComponentsStoreAppsAndSmartlocker"
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "b3a22ebd-fdb3-4c7b-b1d7-f62477f1098b",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_smartScreenBlockOverrideForFiles",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "d6e99022-8be2-493d-a5a3-37b6b3d5b080",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_smartScreenEnableInShell",
-                              "valueJson":  "false",
-                              "value":  false
-                          }
-                      ]
-}
-
-
-"@
-
-####################################################
-
-$ES_SmartLockerEnable = @"
-
-{
-    "displayName":  "[ITPM Corporate] Enable SmartLocker",
-    "description":  "Assign this policy to Company owned Windows 10 devices. WARNING: Reboot required. You must have proper licensing to use this profile: Microsoft 365 Business Premium, E3, or E5. Use either the Audit policy or the Enable policy, but not both at the same time. ",
-    "settingsDelta":  [
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "a7210811-f78c-42de-89a4-e1e67182ba54",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_appLockerApplicationControl",
-                              "valueJson":  "\"enforceComponentsStoreAppsAndSmartlocker\"",
-                              "value":  "enforceComponentsStoreAppsAndSmartlocker"
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "f6217e90-ddce-449c-8035-6b3ebd2fe71a",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_smartScreenBlockOverrideForFiles",
-                              "valueJson":  "true",
-                              "value":  true
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "c839aa8a-eed0-4d9a-93a1-3d39d556fcc2",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_smartScreenEnableInShell",
-                              "valueJson":  "true",
-                              "value":  true
-                          }
-                      ]
-}
-
-
-"@
-
-####################################################
-
 $ES_WindowsHello = @"
 
 {
     "displayName":  "[ITPM Corporate] Windows Hello for Business",
-    "description":  "Assign this profile to Company owned Windows 10 devices that are Azure AD Joined. Do not assign this profile to Hybrid Azure AD Joined devices.",
+    "description":  "Assign this profile to Company owned Windows devices that are Azure AD Joined. Do not assign this profile to Hybrid Azure AD Joined devices.",
     "settingsDelta":  [
                           {
                               "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
@@ -4306,167 +6091,261 @@ $ES_WindowsHello = @"
 
 ####################################################
 
-$ES_CredentialGuard = @"
-
-{
-    "displayName":  "[ITPM Enterprise] Windows Credential Guard",
-    "description":  "Assign this profile to Company owned Windows 10 devices. You must have the proper licensing to use this profile: Windows 10 E3, Windows 10 E5, Microsoft 365 E3, or Microsoft 365 E5. Reboot required after assigning this policy.",
-    "settingsDelta":  [
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "10e3cec5-7ad8-4893-b18a-2192712e5c32",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_windowsHelloForBusinessBlocked",
-                              "valueJson":  "null",
-                              "value":  null
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementIntegerSettingInstance",
-                              "id":  "01b9e719-44fa-42c2-bf31-1ebf251e671f",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinMinimumLength",
-                              "valueJson":  "null",
-                              "value":  null
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementIntegerSettingInstance",
-                              "id":  "d540ddcb-7362-41d9-aa04-f3d91d00e3a9",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinMaximumLength",
-                              "valueJson":  "null",
-                              "value":  null
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "7ab6bb3c-8b71-4eef-9977-d860768b2ae0",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinLowercaseCharactersUsage",
-                              "valueJson":  "\"notConfigured\"",
-                              "value":  "notConfigured"
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "13810d4d-0b1c-4296-ad2c-0f74208f3935",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinUppercaseCharactersUsage",
-                              "valueJson":  "\"notConfigured\"",
-                              "value":  "notConfigured"
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "48afc500-bde2-48f2-bbe6-0688fc6e5a7e",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinSpecialCharactersUsage",
-                              "valueJson":  "\"notConfigured\"",
-                              "value":  "notConfigured"
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementIntegerSettingInstance",
-                              "id":  "4fa67f28-8368-4843-97f5-7bdd5e2679a8",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinExpirationInDays",
-                              "valueJson":  "null",
-                              "value":  null
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementIntegerSettingInstance",
-                              "id":  "f0aa3a2c-bcfc-4712-9839-6e8c59338961",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinPreviousBlockCount",
-                              "valueJson":  "null",
-                              "value":  null
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "2c1b17bc-eecd-4c0e-a897-274acaff1fc3",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_pinRecoveryEnabled",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "bc506189-8231-4479-97f2-fe4e2ae6a394",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_securityDeviceRequired",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "719e4b80-932d-4362-a6eb-7f77ecc64601",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_unlockWithBiometricsEnabled",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "a5479a08-baae-46f7-b706-1d4841a2382d",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_enhancedAntiSpoofingForFacialFeaturesEnabled",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "a258ef47-73a2-4d10-bd90-a9cf9079e1ae",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_useCertificatesForOnPremisesAuthEnabled",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementBooleanSettingInstance",
-                              "id":  "eff025ac-84b6-4d7b-a898-5ce5f23ad22f",
-                              "definitionId":  "deviceConfiguration--windowsIdentityProtectionConfiguration_useSecurityKeyForSignin",
-                              "valueJson":  "false",
-                              "value":  false
-                          },
-                          {
-                              "@odata.type":  "#microsoft.graph.deviceManagementStringSettingInstance",
-                              "id":  "24a7e66c-3ba0-49ce-b647-35a579af9ffb",
-                              "definitionId":  "deviceConfiguration--windows10EndpointProtectionConfiguration_deviceGuardLocalSystemAuthorityCredentialGuardSettings",
-                              "valueJson":  "\"enableWithUEFILock\"",
-                              "value":  "enableWithUEFILock"
-                          }
-                      ]
-}
-
-
-"@
-
-####################################################
-
 
 ###################################################################################################
 ## Import policies from JSON
 ###################################################################################################
+Write-Host
+Write-Host "Compliance policies specify the minimum requirements for connecting to Company resources."
+Write-Host
+$Answer = Read-Host "Do you want to import the Baseline Compliance policies? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
 
-## Import Endpoint Security Baseline profiles
-Write-Host "Adding Corporate Endpoint Security Policies..." -ForegroundColor Cyan
+## RECOMMENDED: Import Baseline MDM Compliance policies 
+Write-Host "Adding Baseline Compliance policies..." -ForegroundColor Cyan
 Write-Host
-Write-Host "Adding Windows 10 Baseline policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_WinBase -JSON $SB_WinBase #OK
+Write-Host "Adding Windows Immediate policy..." -ForegroundColor Yellow
+Add-DeviceCompliancePolicybaseline -JSON $Comp_WinImmediate 
 Write-Host
-Write-Host "Adding Edge Chromium Baseline policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_EdgeBase -JSON $SB_EdgeBase #OK
+Write-Host "Adding Windows Delayed policy..." -ForegroundColor Yellow
+Add-DeviceCompliancePolicybaseline -JSON $Comp_WinDelayed
+Write-Host
+} else
+
+{
+Write-Host
+Write-Host "Baseline Compliance policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+####################################################
+
+## OPTIONAL: Import Windows Information Protection (App protection) policies
+Write-Host "App protection policies help prevent data leakage on endpoints and enable lightweight management for non-enrolled devices."
+Write-Host
+$Answer = Read-Host "Do you want to import App protection policies for Windows 10? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
+Write-Host "Adding Windows Information Protection policies..." -ForegroundColor Cyan
+Write-Host
+Write-Host "Adding WIP policy for MDM enrolled devices" -ForegroundColor Yellow
+Add-MDMWindowsInformationProtectionPolicy -JSON $WIPMDM
+Write-Host
+Write-Host "Adding WIP policy for MAM/unmanaged devices" -ForegroundColor Yellow
+Add-WindowsInformationProtectionPolicy -JSON $WIPMAM 
+Write-Host
+Write-Host "WARNING: Additional set up required in order to use WIP!" -ForegroundColor Yellow 
+Write-Host
+} else 
+
+{ 
+Write-Host
+Write-Host "Windows Information Protection policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+####################################################
+
+## Import Software update rings
+Write-Host "Software update rings control the update schedule on Company owned devices."
+Write-Host
+$Answer = Read-Host "Do you want to import the Software update rings? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
+Write-Host "Adding Default update ring for Windows..." -ForegroundColor Yellow
+Add-DeviceConfigurationPolicy -JSON $Config_WinDefaultUpdate
+Write-Host
+Write-Host "Adding Delayed update ring for Windows..." -ForegroundColor Yellow
+Add-DeviceConfigurationPolicy -JSON $Config_WinDelayedUpdate
+Write-Host
+} else
+
+{
+Write-Host
+Write-Host "Software update rings will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+####################################################
+<#
+## Import desktop apps and Edge (Chromium)
+Write-Host "Corporate applications such as Outlook, Word, and Excel can be deployed automatically to enrolled devices."
+Write-Host
+$Answer = Read-Host "Do you want to import Chromium Edge and Office Desktop apps? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+Write-Host "Adding Windows app packages..." -ForegroundColor Cyan
+Write-Host
+Write-Host "Publishing" ($Office32 | ConvertFrom-Json).displayName -ForegroundColor Yellow
+Add-MDMApplication -JSON $Office32
+Write-Host 
+Write-Host "Publishing" ($Office64 | ConvertFrom-Json).displayName -ForegroundColor Yellow
+Add-MDMApplication -JSON $Office64
+Write-Host
+Write-Host "Publishing" ($ChrEdge | ConvertFrom-Json).displayName -ForegroundColor Yellow
+Add-MDMApplication -JSON $ChrEdge
+Write-Host
+} else
+
+{
+Write-Host
+Write-Host "Chromium Edge and Office apps will not be imported" -ForegroundColor Red
+Write-Host 
+}
+#>
+
+####################################################
+
+Write-Host "Configuration profiles control certain experiences for Company owned devices."
+Write-Host
+$Answer = Read-Host "Do you want to import the Corporate Configuration profiles? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
+## Import Corproate Device configuration profiles
+Write-Host "Adding Corporate Device configuration profiles..." -ForegroundColor Cyan
+Write-Host
+Write-Host "Adding MDM wins over GP profile..." -ForegroundColor Yellow
+Add-DeviceConfigurationPolicy -JSON $Config_WinMDMWins
+Write-Host 
+Write-Host "Adding Allow Autopilot reset profile..." -ForegroundColor Yellow
+Add-DeviceConfigurationPolicy -JSON $Config_WinAllowReset
+Write-Host
+Write-Host "Adding Disable sign-in animation profile..." -ForegroundColor Yellow
+Add-DeviceConfigurationPolicy -JSON $Config_WinDisableAnimation
 Write-Host
 
-## Import Endpoint Security policies
+## Create the ADMX Configuration profile
+Write-Host "Adding OneDrive client config profile..." -ForegroundColor Yellow
+Write-Host
+$Policy_Name = "[ITPM Corporate] Windows: OneDrive client config"
+$Policy_Description = "Configures the OneDrive client. Assign this profile to Company owned Windows devices."
+$GroupPolicyConfigurationID = Create-GroupPolicyConfigurations -DisplayName $Policy_Name -PolicyDescription $Policy_Description
+## Populate the policy with settings
+$JSON_Convert = $GPO_ODfBClient | ConvertFrom-Json
+$JSON_Convert | ForEach-Object { $_
+    
+            	$JSON_Output = ConvertTo-Json -Depth 5 $_
+                
+                Write-Host $JSON_Output
+
+            	Create-GroupPolicyConfigurationsDefinitionValues -JSON $JSON_Output -GroupPolicyConfigurationID $GroupPolicyConfigurationID 
+        	 }
+
+Write-Host "Policy: " $Policy_Name "created" -ForegroundColor Yellow
+Write-Host 
+} else
+{
+Write-Host
+Write-Host "Corporate Configuration profiles will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+
+$Answer = Read-Host "Do you want to import the antivirus policies? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
+Write-Host "Adding Antivirus security profiles..." -ForegroundColor Cyan
+Write-Host
 Write-Host "Adding Microsoft Defender Antivirus policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_Antivirus -JSON $ES_Antivirus #OK
+Add-EndpointSecurityPolicy -TemplateId $IDAV -JSON $ES_Antivirus #OK
 Write-Host
 Write-Host "Adding Windows Security Center policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_SecurityCenter -JSON $ES_SecurityCenter #OK
+Add-EndpointSecurityPolicy -TemplateId $IDWinExp -JSON $ES_SecurityCenter #OK
 Write-Host
+} else
+{
+Write-Host
+Write-Host "Antivirus policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+
+$Answer = Read-Host "Do you want to import the BitLocker policies? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
 Write-Host "Adding BitLocker silent enablement policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_BitLocker -JSON $ES_BitLocker
+Add-EndpointSecurityPolicy -TemplateId $IDBL -JSON $ES_BitLocker
 Write-Host
 Write-Host "Adding BitLocker removable drive protection policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_BitLocker -JSON $ES_BitLockerRD
+Add-EndpointSecurityPolicy -TemplateId $IDBL -JSON $ES_BitLockerRD
 Write-Host
+}else
+{
+Write-Host
+Write-Host "BitLocker policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+
+
+$Answer = Read-Host "Do you want to import the Windows firewall policies? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
 Write-Host "Adding Windows Firewall policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_Firewall -JSON $ES_Firewall
+Add-EndpointSecurityPolicy -TemplateId $IDFW -JSON $ES_Firewall
 Write-Host
+}else
+{
+Write-Host
+Write-Host "Windows firewall policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+
+$Answer = Read-Host "Do you want to import the Attack Surface Reduction policies? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
 Write-Host "Adding Attack surface reduction rules audit policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_ASR -JSON $ES_ASRAudit
+Add-EndpointSecurityPolicy -TemplateId $IDASR -JSON $ES_ASRAudit
 Write-Host
 Write-Host "Adding Attack surface reduction rules enable policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_ASR -JSON $ES_ASREnable
+Add-EndpointSecurityPolicy -TemplateId $IDASR -JSON $ES_ASREnable
 Write-Host
 Write-Host "Adding Device Control Block removable storage policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_DeviceControl -JSON $ES_DeviceControl
+Add-EndpointSecurityPolicy -TemplateId $IDDC -JSON $ES_DeviceControl
 Write-Host
-Write-Host "Adding Account Protection Windows Hello policy..." -ForegroundColor Yellow
-Add-EndpointSecurityPolicy -TemplateId $Template_AccountProtection -JSON $ES_WindowsHello
+}else
+{
 Write-Host
-Write-Host "Script completed" -ForegroundColor Cyan
+Write-Host "Attack Surface Reduction policies will not be imported" -ForegroundColor Red
+Write-Host 
+}
 
+
+$Answer = Read-Host "Do you want to import the Windows Hello policy? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+
+Write-Host "Adding Account Protection Windows Hello policy..." -ForegroundColor Yellow
+Add-EndpointSecurityPolicy -TemplateId $IDAC -JSON $ES_WindowsHello
+Write-Host
+}else
+{
+Write-Host
+Write-Host "Windows Hello policy will not be imported" -ForegroundColor Red
+Write-Host 
+}
+
+
+<#
+Write-Host "Microsoft publishes recommended Security baselines for Windows and Edge."
+Write-Host
+$Answer = Read-Host "Do you want to import the Microsoft Security baseline profiles? Type Y or N and press Enter to continue"
+if ($Answer -eq 'y' -or $Answer -eq 'yes') {
+## RECOMMENDED: Import Endpoint Security Baseline profiles
+Write-Host "Adding Microsoft Security baseline profiles..." -ForegroundColor Cyan
+Write-Host
+Write-Host "Adding Windows OS Baseline policy..." -ForegroundColor Yellow
+Add-EndpointSecurityPolicy -TemplateId $IDWin -JSON $SB_WinBase #OK
+Write-Host
+Write-Host "Adding Edge Chromium Baseline policy..." -ForegroundColor Yellow
+Add-EndpointSecurityPolicy -TemplateId $IDEdge -JSON $SB_EdgeBase #OK
+Write-Host
+} else
+{
+Write-Host
+Write-Host "Microsoft Security baselines will not be imported" -ForegroundColor Red
+Write-Host 
+}
+#>
+####################################################
+
+Write-Host "Script completed" -ForegroundColor Cyan
+Write-Host
